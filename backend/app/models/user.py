@@ -9,6 +9,7 @@ from app.db.session import Base
 
 
 class UserRole(StrEnum):
+    PENDING_ATTORNEY = "PENDING_ATTORNEY"
     ATTORNEY = "ATTORNEY"
     ADMIN = "ADMIN"
 
@@ -21,6 +22,8 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False, default=UserRole.ATTORNEY)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    full_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    last_assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

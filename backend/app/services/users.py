@@ -19,16 +19,31 @@ def authenticate_user(db: Session, email: str, password: str) -> User | None:
     return user
 
 
-def ensure_initial_attorney(db: Session) -> None:
+def create_pending_attorney(db: Session, full_name: str, email: str, password: str) -> User:
+    user = User(
+        full_name=full_name,
+        email=email.lower(),
+        password_hash=hash_password(password),
+        role=UserRole.PENDING_ATTORNEY,
+        is_active=False,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def ensure_bootstrap_admin(db: Session) -> None:
     settings = get_settings()
-    email = str(settings.internal_email).lower()
+    email = str(settings.bootstrap_admin_email).lower()
     if get_user_by_email(db, email) is not None:
         return
     db.add(
         User(
+            full_name="Bootstrap Admin",
             email=email,
-            password_hash=hash_password(settings.internal_password),
-            role=UserRole.ATTORNEY,
+            password_hash=hash_password(settings.bootstrap_admin_password),
+            role=UserRole.ADMIN,
             is_active=True,
         )
     )

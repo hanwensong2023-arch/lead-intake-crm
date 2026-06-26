@@ -26,3 +26,9 @@ def require_internal_user(
     if user.role not in {UserRole.ATTORNEY, UserRole.ADMIN}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Attorney access required")
     return user
+
+
+def require_admin_user(user: User = Depends(require_internal_user)) -> User:
+    if user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return user

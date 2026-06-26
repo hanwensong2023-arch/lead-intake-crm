@@ -12,11 +12,26 @@ export type Lead = {
   updated_at: string;
   reached_out_at: string | null;
   reached_out_by: string | null;
+  assigned_attorney_id: string | null;
+  assigned_attorney_email: string | null;
+  assigned_at: string | null;
 };
+
+export type UserRole = "PENDING_ATTORNEY" | "ATTORNEY" | "ADMIN";
 
 export type AuthUser = {
   email: string;
-  role: "ATTORNEY" | "ADMIN";
+  role: UserRole;
+  full_name: string;
+};
+
+export type Attorney = {
+  id: string;
+  full_name: string;
+  email: string;
+  role: UserRole;
+  is_active: boolean;
+  last_assigned_at: string | null;
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
@@ -46,7 +61,7 @@ export function clearToken(): void {
 }
 
 export async function submitLead(formData: FormData): Promise<{ id: string; message: string }> {
-  const response = await fetch(`${API_URL}/leads`, {
+  const response = await apiFetch("/leads", {
     method: "POST",
     body: formData
   });
@@ -54,7 +69,7 @@ export async function submitLead(formData: FormData): Promise<{ id: string; mess
 }
 
 export async function login(email: string, password: string): Promise<string> {
-  const response = await fetch(`${API_URL}/auth/login`, {
+  const response = await apiFetch("/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password })
@@ -63,15 +78,40 @@ export async function login(email: string, password: string): Promise<string> {
   return payload.access_token;
 }
 
+export async function registerAttorney(fullName: string, email: string, password: string): Promise<AuthUser> {
+  const response = await apiFetch("/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ full_name: fullName, email, password })
+  });
+  return parseResponse<AuthUser>(response);
+}
+
 export async function verifySession(): Promise<AuthUser> {
-  const response = await fetch(`${API_URL}/auth/me`, {
+  const response = await apiFetch("/auth/me", {
+    headers: authHeaders()
+  });
+  return parseResponse<AuthUser>(response);
+}
+
+export async function fetchAttorneys(): Promise<Attorney[]> {
+  const response = await apiFetch("/auth/attorneys", {
+    headers: authHeaders()
+  });
+  const payload = await parseResponse<{ attorneys: Attorney[] }>(response);
+  return payload.attorneys;
+}
+
+export async function approveAttorney(id: string): Promise<AuthUser> {
+  const response = await apiFetch(`/auth/attorneys/${id}/approve`, {
+    method: "PATCH",
     headers: authHeaders()
   });
   return parseResponse<AuthUser>(response);
 }
 
 export async function fetchLeads(): Promise<Lead[]> {
-  const response = await fetch(`${API_URL}/leads`, {
+  const response = await apiFetch("/leads", {
     headers: authHeaders()
   });
   const payload = await parseResponse<{ leads: Lead[] }>(response);
@@ -79,14 +119,14 @@ export async function fetchLeads(): Promise<Lead[]> {
 }
 
 export async function fetchLead(id: string): Promise<Lead> {
-  const response = await fetch(`${API_URL}/leads/${id}`, {
+  const response = await apiFetch(`/leads/${id}`, {
     headers: authHeaders()
   });
   return parseResponse<Lead>(response);
 }
 
 export async function markReachedOut(id: string): Promise<Lead> {
-  const response = await fetch(`${API_URL}/leads/${id}/reach-out`, {
+  const response = await apiFetch(`/leads/${id}/reach-out`, {
     method: "PATCH",
     headers: authHeaders()
   });
@@ -94,7 +134,7 @@ export async function markReachedOut(id: string): Promise<Lead> {
 }
 
 export async function downloadResume(id: string): Promise<Blob> {
-  const response = await fetch(`${API_URL}/leads/${id}/resume`, {
+  const response = await apiFetch(`/leads/${id}/resume`, {
     headers: authHeaders()
   });
   if (response.ok) return response.blob();
@@ -104,6 +144,20 @@ export async function downloadResume(id: string): Promise<Blob> {
 function authHeaders(): HeadersInit {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(`${API_URL}${path}`, init);
+  } catch (caught) {
+    if (caught instanceof TypeError) {
+      throw new ApiError(
+        `Could not reach the API at ${API_URL}. Start FastAPI on port 8000 or update frontend/.env.local NEXT_PUBLIC_API_URL to match your backend port, then restart Next.js.`,
+        0
+      );
+    }
+    throw caught;
+  }
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {

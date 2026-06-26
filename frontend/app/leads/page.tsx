@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, LogOut, RefreshCw } from "lucide-react";
+import { ArrowRight, LogOut, RefreshCw, Settings } from "lucide-react";
 import { ApiError, AuthUser, clearToken, fetchLeads, getToken, Lead, verifySession } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
@@ -49,6 +49,11 @@ export default function LeadsPage() {
         <h1>Leads</h1>
         <div className="nav">
           {user ? <span className="muted">Signed in as {user.email}</span> : null}
+          {user?.role === "ADMIN" ? (
+            <Link className="text-button" href="/admin/attorneys">
+              <Settings size={15} /> Attorneys
+            </Link>
+          ) : null}
           <button className="text-button" type="button" onClick={loadLeads}>
             <RefreshCw size={15} /> Refresh
           </button>
@@ -76,6 +81,7 @@ export default function LeadsPage() {
               <div className="muted">
                 {lead.email} - {new Date(lead.created_at).toLocaleString()}
               </div>
+              {lead.assigned_attorney_email ? <div className="muted">Assigned to {lead.assigned_attorney_email}</div> : null}
             </div>
             <StatusBadge state={lead.state} />
             <ArrowRight aria-hidden size={18} />

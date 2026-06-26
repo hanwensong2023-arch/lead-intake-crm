@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { login, setToken } from "@/lib/api";
+import { login, setToken, verifySession } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,7 +18,8 @@ export default function LoginPage() {
     try {
       const token = await login(String(formData.get("email")), String(formData.get("password")));
       setToken(token);
-      router.push("/leads");
+      const user = await verifySession();
+      router.push(user.role === "ADMIN" ? "/admin/attorneys" : "/leads");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to log in.");
     } finally {

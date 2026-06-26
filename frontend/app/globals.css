@@ -167,7 +167,10 @@ input {
 }
 
 .message {
+  align-items: center;
   border-radius: 6px;
+  display: flex;
+  gap: 8px;
   line-height: 1.4;
   padding: 12px;
 }
@@ -203,7 +206,7 @@ input {
   align-items: center;
   display: grid;
   gap: 16px;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   padding: 18px;
 }
 
@@ -218,17 +221,20 @@ input {
 
 .badge {
   align-items: center;
-  border-radius: 999px;
+  align-self: start;
+  border-radius: 4px;
   display: inline-flex;
-  font-size: 12px;
+  flex-shrink: 0;
+  font-size: 11px;
   font-weight: 800;
   justify-content: center;
+  justify-self: start;
   letter-spacing: 0;
   line-height: 1;
-  min-height: 28px;
+  height: 20px;
+  max-width: fit-content;
   min-width: max-content;
-  overflow: hidden;
-  padding: 7px 10px;
+  padding: 0 7px;
   text-align: center;
   white-space: nowrap;
   width: fit-content;

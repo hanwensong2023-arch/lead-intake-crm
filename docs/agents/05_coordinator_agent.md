@@ -12,10 +12,21 @@ Use `docs/ASSIGNMENT_REQUIREMENTS.md` as the source of truth.
 
 - Maintain the global plan.
 - Assign work to backend, frontend, docs, and verification agents.
+- Reuse the existing agent sessions and their markdown responsibility files.
+- Update an existing agent's task or responsibility when the work fits that agent's markdown lane.
+- Ask for user approval before creating any new agent or new agent session.
 - Avoid overlapping edit ownership between agents.
 - Integrate completed work.
 - Resolve conflicts.
 - Ensure verification runs against the original assignment.
+- Ensure Alma product decisions are integrated:
+  - Bootstrap admin from environment variables.
+  - Attorney self-registration with pending approval.
+  - Admin attorney approval.
+  - Capacity-based assignment to active approved attorneys.
+  - No hardcoded attorney email.
+  - Customer email plus assigned-attorney case notification.
+  - Option D AI-assisted assignment documented as future improvement.
 - Commit final work.
 - Upload to a public GitHub repo only once after verification is acceptable.
 - Provide the final repo link and screen recording checklist.

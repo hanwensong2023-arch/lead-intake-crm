@@ -14,6 +14,9 @@ class LeadRead(BaseModel):
     email: EmailStr
     resume_filename: str
     resume_content_type: str
+    assigned_attorney_id: str | None
+    assigned_attorney_email: EmailStr | None
+    assigned_at: datetime | None
     state: LeadState
     created_at: datetime
     updated_at: datetime

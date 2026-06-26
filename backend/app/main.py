@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import auth, leads
 from app.core.config import get_settings
 from app.db.session import SessionLocal, init_db
-from app.services.users import ensure_initial_attorney
+from app.services.users import ensure_bootstrap_admin
 
 
 settings = get_settings()
@@ -17,7 +17,7 @@ settings = get_settings()
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     init_db()
     with SessionLocal() as db:
-        ensure_initial_attorney(db)
+        ensure_bootstrap_admin(db)
     yield
 
 
@@ -30,6 +30,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/health")
 def health() -> dict[str, str]:

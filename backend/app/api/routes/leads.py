@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_internal_user
 from app.db.session import get_db
 from app.models.lead import Lead, LeadState
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.lead import LeadCreateResponse, LeadListResponse, LeadRead
+from app.services.assignment import assign_lead_to_attorney
 from app.services.email import EmailService
 from app.services.storage import store_resume
 
@@ -41,18 +42,27 @@ async def create_lead(
         resume_storage_path=resume_storage_path,
     )
     db.add(lead)
+    db.flush()
+    try:
+        attorney = assign_lead_to_attorney(db, lead)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     db.commit()
     db.refresh(lead)
-    EmailService().send_lead_notifications(lead)
+    EmailService().send_lead_notifications(lead, attorney)
     return LeadCreateResponse(id=lead.id, state=lead.state, message="Lead submitted successfully.")
 
 
 @router.get("", response_model=LeadListResponse)
 def list_leads(
     db: Session = Depends(get_db),
-    _: User = Depends(require_internal_user),
+    user: User = Depends(require_internal_user),
 ) -> LeadListResponse:
-    leads = db.scalars(select(Lead).order_by(Lead.created_at.desc())).all()
+    statement = select(Lead).order_by(Lead.created_at.desc())
+    if user.role != UserRole.ADMIN:
+        statement = statement.where(Lead.assigned_attorney_id == user.id)
+    leads = db.scalars(statement).all()
     return LeadListResponse(leads=list(leads))
 
 
@@ -60,11 +70,13 @@ def list_leads(
 def get_lead(
     lead_id: str,
     db: Session = Depends(get_db),
-    _: User = Depends(require_internal_user),
+    user: User = Depends(require_internal_user),
 ) -> Lead:
     lead = db.get(Lead, lead_id)
     if lead is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lead not found")
+    if user.role != UserRole.ADMIN and lead.assigned_attorney_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Lead is not assigned to this attorney")
     return lead
 
 
@@ -77,6 +89,8 @@ def mark_reached_out(
     lead = db.get(Lead, lead_id)
     if lead is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lead not found")
+    if user.role != UserRole.ADMIN and lead.assigned_attorney_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Lead is not assigned to this attorney")
     if lead.state != LeadState.REACHED_OUT:
         lead.state = LeadState.REACHED_OUT
         lead.reached_out_at = datetime.now(UTC)
@@ -91,11 +105,13 @@ def mark_reached_out(
 def download_resume(
     lead_id: str,
     db: Session = Depends(get_db),
-    _: User = Depends(require_internal_user),
+    user: User = Depends(require_internal_user),
 ) -> FileResponse:
     lead = db.get(Lead, lead_id)
     if lead is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lead not found")
+    if user.role != UserRole.ADMIN and lead.assigned_attorney_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Lead is not assigned to this attorney")
 
     resume_path = Path(lead.resume_storage_path)
     if not resume_path.exists():

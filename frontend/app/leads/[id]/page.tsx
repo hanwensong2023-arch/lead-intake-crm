@@ -116,6 +116,8 @@ export default function LeadDetailPage() {
               </div>
             </div>
             <Fact label="Submitted" value={new Date(lead.created_at).toLocaleString()} />
+            {lead.assigned_attorney_email ? <Fact label="Assigned attorney" value={lead.assigned_attorney_email} /> : null}
+            {lead.assigned_at ? <Fact label="Assigned" value={new Date(lead.assigned_at).toLocaleString()} /> : null}
             <Fact label="Last updated" value={new Date(lead.updated_at).toLocaleString()} />
           </div>
 
